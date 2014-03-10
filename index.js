@@ -6,9 +6,13 @@ $(function() {
       console.log(error);
     } else if (user) {
       // user authenticated with Firebase
-      console.log('full user:', user);
-      console.log('User ID: ' + user.id + ', Provider: ' + user.provider);
-//      myRootRef.set(user.id, 'Anonymous' + user.id.substr(0,8));
+      console.log('full authenticated user:', user);
+
+      var myGuestsRef = myRootRef.child('users/guests/');
+      myGuestsRef.push({user_id:user.id});
+
+      $guest = $('<p>').text("Guest: " + user.id);
+      $('body').prepend($guest);
     } else {
       console.log('Log in new guest.');
       simpleLogin.login('anonymous');
