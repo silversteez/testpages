@@ -5,8 +5,29 @@
     </head>
     <body>
         <h3>Firebase Tests</h3>
-        <input type="text" id="my-input"/>
+        <div id="user-data"></div>
+        <input type="text" id="my-data" placeholder="key value data"/>
+        <input type="text" id="my-input" placeholder="say something"/>
+        <div>
+            <select name="login-type" id="login-type">
+                <option value="create">Create</option>
+                <option value="login">Login</option>
+            </select>
+            <input type="text" id="my-email" placeholder="email"/>
+            <input type="text" id="my-password" placeholder="password"/>
+        </div>
+        <button id="my-create-account">Create Account</button>
+        <button id="find-game">Find Game</button>
+        <button id="join-queue">Join Queue</button>
+        <p id="loading" style="display: none">Looking For Game</p>
+        <p id="in-queue" style="display: none">In Queue</p>
         <ul id="my-list"></ul>
+
+        <div id="my-game" style="display: none">
+            <h2>In Game</h2>
+            <p id="player-1"></p>
+            <p id="player-2"></p>
+        </div>
 
 
         <script type='text/javascript' src='https://cdn.firebase.com/js/client/1.0.6/firebase.js'></script>
