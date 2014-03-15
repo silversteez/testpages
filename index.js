@@ -4,6 +4,7 @@ $(function() {
   states.IN_QUEUE = "IN_QUEUE";
   states.JOINING_GAME = "JOINING_GAME";
   states.CHILLING = "CHILLING";
+  states.NEW_GAME = "NEW_GAME";
   states.MY_TURN = "MY_TURN";
   states.OPPONENT_TURN = "OPPONENT_TURN";
   states.GAME_OVER = "GAME_OVER";
@@ -17,13 +18,21 @@ $(function() {
   var usersRef = rootRef.child('users');
   var queueRef = rootRef.child('playerQueue');
   var gamesRef = rootRef.child('games');
-//  var myQueueRef; // My position when I'm in queue
 
+  // in-game vars
+  var START_ATTACK = 5;
+  var START_HEALTH = 10;
+  var myCurGameData;
+  var myOppGameData;
   var myHealth;
   var myAttack;
 
   var myOpponentId;
   var oppQueueRef;
+
+  // View stuff
+  var $game;
+  var gameTemplate;
 
   var auth = new FirebaseSimpleLogin(rootRef, function(error, user) {
     if (error) {
@@ -42,16 +51,21 @@ $(function() {
         var myPossibleGameRef = snapshot.val();
         if (myPossibleGameRef) {
           console.log('I am in a game! Located at', myPossibleGameRef);
-          myCurGameRef = myPossibleGameRef;
 
           // Verify contents of myPossibleGameRef... Necessary??
           gamesRef.child(myPossibleGameRef).once('value', function(snapshot){
             var snapVal = snapshot.val();
             if (snapVal) {
               console.log('Game found', snapVal);
+              myCurGameRef = snapshot.ref();
+//              myCurGameData = myCurGameRef.child(userId);
+//              myOppGameData = myCurGameRef.child(myOpponentId);
+              // Set up main game update handler on game reference
+              myCurGameRef.on('value', onGameUpdateHandler);
             } else {
               console.log('Game not found.');
             }
+
           });
         } else {
           console.log('My curGame value is null.');
@@ -117,7 +131,16 @@ $(function() {
 
   function createGame() {
     console.log('Attempting to create game.');
-    var gameObj = {p1: userId, p2: myOpponentId};
+    var gameObj = {};
+    var startGameData = {
+      attack: START_ATTACK,
+      health: START_HEALTH
+    };
+    gameObj[userId] = startGameData;
+    gameObj[myOpponentId] = startGameData;
+    gameObj.playerTurn = userId;
+    gameObj.state = states.NEW_GAME;
+
     var curGameRef = gamesRef.push(gameObj);
     var myCurGameName = curGameRef.name();
 
@@ -149,6 +172,42 @@ $(function() {
   function onCreateOrLogin(error, user) {
     console.log('oncreateorlogin', error, user);
   }
+
+
+  // in-game stuff
+
+  // Main Game Update - Run for both players on any change to root gameObj
+  function onGameUpdateHandler(snapshot) {
+    var gameSnap = snapshot.val();
+    if (!gameSnap) {
+      console.log('gameSnap is null')
+    } else {
+      console.log('gameSnap is not null.')
+      if (gameSnap.state === states.NEW_GAME) {
+        $game.append($(gameTemplate));
+        $game.show();
+
+        if (gameSnap.playerTurn === userId) {
+          // It's my turn!
+          console.log('New game. My turn.');
+        } else {
+          // It's Opponent's turn!
+          console.log('New game. Opponents turn.');
+        }
+      }
+    }
+  }
+
+  function initView() {
+    // Grab template
+    var temp = $('#my-game-template');
+    gameTemplate = JSON.stringify(temp[0].html);
+    temp.remove();
+
+    $game = $('#my-game');
+  }
+
+  initView();
 
 });
 
