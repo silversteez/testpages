@@ -43,52 +43,43 @@ $(function() {
     }
   });
 
-   var myOpponentId;
+
+  var myOpponentId;
+  var opponentRef;
   $("#find-game").click(function(e) {
     $('#loading').show();
-//    playerQueueRef.startAt().limit(1).once("value", function(snapshot){
-//      console.log("opponent is", snapshot.val());
-//      if (!snapshot.val()) {
-//        console.log("no opponents available");
-//      } else {
-//        snapshot.ref().transaction(function(curData){
-//          myOpponentId = curData.val();
-//          curData.remove();
-//          return;
-//        }, function(error, committed, snapshot) {
-//          alert(error);
-//          alert(committed);
-//          alert(snapshot.val());
-//        });
-//      }
-//    });
     playerQueueRef.startAt().limit(1).once("value", function(snapshot) {
+      if (!snapshot.val()) {
+        // Queue empty
+        console.log("Empty queue");
+      }
       snapshot.forEach(function(opponent) {
-//        myOpponentId = opponent.val();
-//        opponent.ref().remove(function(error){
-//          if (error) {
-//            console.log(error);
-//          }
-//        });
-
-        opponent.ref().transaction(function(curValue){
-          if(curValue){
+        opponentRef = opponent.ref();
+        opponentRef.transaction(function(curValue){
+          // If opponent is not null & no one has already declared himself as opponent
+          if(curValue && !curValue.opponent){
             myOpponentId = curValue.uid;
-            return null; // Doesn't result in an error if it's already been nulled by another user
+            curValue.opponent = userId; // Declare myself as their opponent
+            return curValue;
           }
         }, function(error, committed, snapshot){
-          console.log(error, committed, snapshot.val());
+          if (error) {
+            console.log(error);
+          }
+          if (committed) {
+            // Start game between 2 players
+            console.log("Match created between", snapshot.val());
+            // Remove queued opponent from Queue and try to start match
+            opponentRef.remove();
+          } else {
+            // No match found
+            console.log("Failed to find a match");
+          }
         });
       });
     });
-
-//    playerQueueRef.once("value", function(playerQueue){
-//      console.log("playerQueue is", playerQueue.val());
-////      playerQueue.startAt().limit(1).once("value", function(snapshot) {
-////
-////      });
-//    });
   });
+
 
   $("#join-queue").click(function(e) {
     playerQueueRef.push({uid:userId}, function(error){
