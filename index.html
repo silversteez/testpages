@@ -6,22 +6,23 @@
     <body>
         <h3>Firebase Tests</h3>
         <div id="user-data"></div>
-        <input type="text" id="my-data" placeholder="key value data"/>
-        <input type="text" id="my-input" placeholder="say something"/>
+
         <div>
             <select name="login-type" id="login-type">
-                <option value="create">Create</option>
                 <option value="login">Login</option>
+                <option value="create">Create</option>
             </select>
             <input type="text" id="my-email" placeholder="email"/>
             <input type="text" id="my-password" placeholder="password"/>
+            <button id="my-create-account">Create Account or Log in</button>
         </div>
-        <button id="my-create-account">Create Account</button>
-        <button id="find-game">Find Game</button>
-        <button id="join-queue">Join Queue</button>
+
+        <div>
+            <button id="find-game">Find Game</button>
+        </div>
+
         <p id="loading" style="display: none">Looking For Game</p>
         <p id="in-queue" style="display: none">In Queue</p>
-        <ul id="my-list"></ul>
 
         <div id="my-game" style="display: none">
             <h2>In Game</h2>
