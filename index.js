@@ -5,6 +5,7 @@ $(function() {
   states.JOINING_GAME = "JOINING_GAME";
   states.CHILLING = "CHILLING";
   states.NEW_GAME = "NEW_GAME";
+  states.MID_GAME = "MID_GAME";
   states.MY_TURN = "MY_TURN";
   states.OPPONENT_TURN = "OPPONENT_TURN";
   states.GAME_OVER = "GAME_OVER";
@@ -21,7 +22,7 @@ $(function() {
 
   // in-game vars
   var START_ATTACK = 5;
-  var START_HEALTH = 10;
+  var START_HEALTH = 50;
   var myCurGameData;
   var myOppGameData;
   var myHealth;
@@ -58,8 +59,20 @@ $(function() {
             if (snapVal) {
               console.log('Game found', snapVal);
               myCurGameRef = snapshot.ref();
-//              myCurGameData = myCurGameRef.child(userId);
-//              myOppGameData = myCurGameRef.child(myOpponentId);
+
+              // if joined and game is in-progress, might not have opponentId
+              if (!myOpponentId) {
+                snapVal.playerList.forEach(function(id) {
+                  if (id !== userId) {
+                    myOpponentId = id;
+                    console.log('Got myOpponentId:', myOpponentId);
+                  }
+                });
+              }
+
+              // Set up the in-game view
+              createGameView(snapshot);
+
               // Set up main game update handler on game reference
               myCurGameRef.on('value', onGameUpdateHandler);
             } else {
@@ -138,6 +151,7 @@ $(function() {
     };
     gameObj[userId] = startGameData;
     gameObj[myOpponentId] = startGameData;
+    gameObj.playerList = [userId, myOpponentId];
     gameObj.playerTurn = userId;
     gameObj.state = states.NEW_GAME;
 
@@ -176,17 +190,40 @@ $(function() {
 
   // in-game stuff
 
+  function createGameView(snapshot) {
+    console.log('Setting up game view.');
+    $game.empty();
+    $game.append($(gameTemplate));
+    // Bind attack button
+    $game.find('#attack-button').click(function (e) {
+      snapshot.ref().child(myOpponentId).transaction(function (curValue) {
+        console.log('attack transaction curValue:', curValue);
+        if (curValue.health > 0) {
+          curValue.health -= START_ATTACK;
+        } else {
+          curValue.health = 0;
+        }
+        return curValue;
+      }, function(error, committed, snapshot){
+        console.log('attack transaction result:', error, committed, snapshot.val());
+        if (snapshot.val() && snapshot.val().health <= 0) {
+          console.log('Opponent dead!');
+        }
+      });
+
+    });
+    $game.show();
+  }
+
   // Main Game Update - Run for both players on any change to root gameObj
   function onGameUpdateHandler(snapshot) {
     var gameSnap = snapshot.val();
     if (!gameSnap) {
       console.log('gameSnap is null')
     } else {
-      console.log('gameSnap is not null.')
-      if (gameSnap.state === states.NEW_GAME) {
-        $game.append($(gameTemplate));
-        $game.show();
+      console.log('onGameUpdateHandler!');
 
+      if (gameSnap.state === states.NEW_GAME) {
         if (gameSnap.playerTurn === userId) {
           // It's my turn!
           console.log('New game. My turn.');
@@ -194,6 +231,9 @@ $(function() {
           // It's Opponent's turn!
           console.log('New game. Opponents turn.');
         }
+
+        // Set the state to something other than NEW_GAME
+        snapshot.ref().update({state: states.MID_GAME});
       }
     }
   }
@@ -201,7 +241,7 @@ $(function() {
   function initView() {
     // Grab template
     var temp = $('#my-game-template');
-    gameTemplate = JSON.stringify(temp[0].html);
+    gameTemplate = temp.html();
     temp.remove();
 
     $game = $('#my-game');
