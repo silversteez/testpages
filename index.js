@@ -32,8 +32,11 @@ $(function() {
   var oppQueueRef;
 
   // View stuff
-  var $game;
   var gameTemplate;
+  var $game;
+  var $myHealth;
+  var $opponentHealth;
+  var $gameState;
 
   var auth = new FirebaseSimpleLogin(rootRef, function(error, user) {
     if (error) {
@@ -194,6 +197,14 @@ $(function() {
     console.log('Setting up game view.');
     $game.empty();
     $game.append($(gameTemplate));
+
+    $myHealth = $game.find('#my-health');
+    $opponentHealth = $game.find('#opponent-health');
+    $gameState = $game.find('#game-state');
+
+    // Save this for declaring victory transaction
+    var gameSnapshot = snapshot;
+
     // Bind attack button
     $game.find('#attack-button').click(function (e) {
       snapshot.ref().child(myOpponentId).transaction(function (curValue) {
@@ -207,12 +218,36 @@ $(function() {
       }, function(error, committed, snapshot){
         console.log('attack transaction result:', error, committed, snapshot.val());
         if (snapshot.val() && snapshot.val().health <= 0) {
-          console.log('Opponent dead!');
+          console.log('Opponent dead! I shall claim victory...');
+
+          // Attempt to declare myself the winner.
+          gameSnapshot.ref().child('winner').transaction(function(curValue){
+            if (!curValue) {
+              return userId;
+            }
+          }, function(error, committed, snapshot) {
+            console.log('Claim victory transaction result:', error, committed, snapshot && snapshot.val());
+          });
         }
       });
 
     });
     $game.show();
+  }
+
+  function updateGameView(gameSnap) {
+    $myHealth.text("My Health: " + gameSnap[userId].health);
+    $opponentHealth.text("Opponent Health: " + gameSnap[myOpponentId].health);
+    // Update this...
+    if (!gameSnap.winner) {
+      $gameState.text(gameSnap.state + ': Attack!');
+    } else {
+      if (gameSnap.winner === userId) {
+        $gameState.text('I AM THE WINNER!!!!');
+      } else {
+        $gameState.text('I HAVE LOST. NOOOOOO!!!!')
+      }
+    }
   }
 
   // Main Game Update - Run for both players on any change to root gameObj
@@ -235,6 +270,16 @@ $(function() {
         // Set the state to something other than NEW_GAME
         snapshot.ref().update({state: states.MID_GAME});
       }
+
+      if (gameSnap.winner) {
+          // Setting stuff in here seems to fuck up the transaction. Need to investigate...
+
+//        // Handle showing the winner, saving stats, and cleaning up game/view
+//        snapshot.ref().update({state: states.GAME_OVER});
+      }
+
+      // Update view
+      updateGameView(gameSnap);
     }
   }
 
